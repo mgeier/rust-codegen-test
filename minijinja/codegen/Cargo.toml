@@ -1,8 +1,5 @@
-[workspace]
-members = ["codegen"]
-
 [package]
-name = "minijinja-test"
+name = "codegen"
 version = "0.1.0"
 edition = "2024"
 
