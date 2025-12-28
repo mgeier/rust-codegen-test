@@ -2,6 +2,12 @@
 name = "codegen"
 version = "0.1.0"
 edition = "2024"
+publish = false
+
+# TODO: feature "watch" (active by default, not needed on CI)
 
 [dependencies]
 minijinja = "2.14"
+notify = "8.2"
+serde = "1"
+toml = "0.9"

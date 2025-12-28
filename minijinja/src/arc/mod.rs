@@ -1,1 +1,1 @@
-// This file has been auto-generated ... pow2 = false
+// This file has been auto-generated ... arc = true
