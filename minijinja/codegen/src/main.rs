@@ -1,7 +1,12 @@
-use std::{collections::BTreeMap, fs, path::{Path, PathBuf}};
+use std::{
+    collections::{BTreeMap, HashSet},
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
-use minijinja::{Environment, Value};
-use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher as _};
+use minijinja::{Environment, Value, path_loader};
 use serde::Deserialize;
 
 type Context = BTreeMap<String, Value>;
@@ -9,7 +14,6 @@ type Context = BTreeMap<String, Value>;
 // TODO: --watch: only run on template file changes
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     // TODO: simple CLI parsing with std::env::args()
 
     // TODO: get configs from arguments or scan config dir
@@ -23,46 +27,64 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx: Context = Deserialize::deserialize(data)?;
     // TODO: create list of contexts
     let contexts = vec![ctx];
-
-    // TODO: differentiate between "src" and "test" (an maybe others?)
-
     let template_dir = codegen_dir.join("templates");
 
     let watch = true;
     if watch {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
-
-        // TODO: separate watcher for each top-level directory? src, test, ...
-
-        watcher.watch(&template_dir.join("src"), RecursiveMode::Recursive)?;
-
-        for res in rx {
-            match res {
-                Ok(event) => println!("Change: {event:?}"),
-                Err(error) => eprintln!("Error: {error:?}"),
+        use notify::{
+            Config, Event, EventKind::Modify, RecommendedWatcher, RecursiveMode::Recursive,
+            Watcher as _,
+        };
+        let (mut tx, mut rx) = rtrb::RingBuffer::new(128);
+        let mut watcher = RecommendedWatcher::new(
+            move |res| match res {
+                Ok(Event {
+                    kind: Modify(_),
+                    paths,
+                    ..
+                }) => {
+                    for path in paths {
+                        tx.push(path).expect("queue too small");
+                    }
+                }
+                Ok(_) => {}
+                Err(error) => eprintln!("Error from notify: {error:?}"),
+            },
+            Config::default(),
+        )?;
+        watcher.watch(&template_dir, Recursive)?;
+        println!("Watching template files for changes, press Ctrl-C to cancel.");
+        loop {
+            // Duplicate paths are removed, order doesn't matter.
+            for path in HashSet::<PathBuf>::from_iter(rx.read_chunk(rx.slots()).unwrap()) {
+                let path = path.strip_prefix(&template_dir)?;
+                if path.extension().and_then(OsStr::to_str) != Some("rs") {
+                    continue;
+                }
+                render(&parent_dir, path, &contexts)?;
             }
+            std::thread::sleep(Duration::from_secs(1));
         }
-        // TODO: how to cancel? Ctrl-C?
-
-        Ok(())
     } else {
-        // TODO: only pass parent_dir, use that to find template dir? or use static template dir?
-        render(&template_dir, "src", "mod.rs", &contexts, &parent_dir)
+        // TODO: walk templates/**/*.rs
+        render(&parent_dir, Path::new("src/mod.rs"), &contexts)
     }
 }
 
-fn render(template_dir: &Path, subdir: &str, template: &str, contexts: &[Context], parent_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let mut env = Environment::new();
-    let source = fs::read_to_string(template_dir.join(subdir).join(template))?;
-    env.add_template(template, &source)?;
-    // TODO: use env.set_loader(path_loader("templates/src"))?
-    let tmpl = env.get_template(template).unwrap();
-    // TODO: for ctx in contexts ...
+fn render(dir: &Path, name: &Path, contexts: &[Context]) -> Result<(), Box<dyn std::error::Error>> {
+    let mut env = Environment::empty();
+    env.set_loader(path_loader(dir.join("codegen/templates")));
+    let tmpl = env.get_template(name.to_str().expect("invalid template name"))?;
+    let mut iter = name.iter().map(OsStr::to_str).map(Option::unwrap);
+    let subdir = iter.next().unwrap();
+    assert!(["src", "tests"].contains(&subdir));
+    let rest = PathBuf::from_iter(iter);
     for ctx in contexts {
         let rendered = tmpl.render(ctx)?;
-        // TODO: get name of context (e.g. "arc")
-        fs::write(parent_dir.join(subdir).join("arc").join(template), rendered)?;
+        // TODO: get name of context (e.g. "arc") == module name
+        // TODO: add module name to context? or have it be part of the config?
+        fs::write(dir.join(subdir).join("arc").join(&rest), rendered)?;
     }
+    println!("Rendered {name:?}.");
     Ok(())
 }

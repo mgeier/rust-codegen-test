@@ -7,7 +7,9 @@ publish = false
 # TODO: feature "watch" (active by default, not needed on CI)
 
 [dependencies]
-minijinja = "2.14"
+minijinja = { version = "2.14", default-features = false, features = ["deserialization", "loader"]}
 notify = "8.2"
+#rtrb = { path = ".." }
+rtrb = "0.3"
 serde = "1"
 toml = "0.9"
