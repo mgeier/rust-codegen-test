@@ -1,0 +1,8 @@
+#storage = "array"
+N = true
+arc = false
+bip = false
+contiguous = false
+padded = true
+pow2 = false
+#module = "rtrb::array"
