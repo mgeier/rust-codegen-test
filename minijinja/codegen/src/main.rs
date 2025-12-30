@@ -30,11 +30,8 @@ fn main() {
     let parent_dir = codegen_dir.join("..");
     let config_dir = codegen_dir.join("configs");
     let mut contexts = vec![];
-    for entry in fs::read_dir(config_dir).unwrap() {
-        let config_path = entry.unwrap().path();
-        if config_path.extension().and_then(OsStr::to_str) != Some("toml") {
-            continue;
-        }
+    for entry in glob(config_dir.join("*.toml").to_str().unwrap()).unwrap() {
+        let config_path = entry.unwrap();
         let config_name = config_path
             .file_stem()
             .expect("invalid config name")
