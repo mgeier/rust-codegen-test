@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::HashSet,
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
@@ -7,11 +7,10 @@ use std::{
 };
 
 use minijinja::{Environment, Value, path_loader};
-use serde::Deserialize;
-
-type Context = BTreeMap<String, Value>;
 
 // TODO: --watch: only run on template file changes
+
+// TODO: -h/--help: rudimentary help text
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: simple CLI parsing with std::env::args()
@@ -23,8 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_path = codegen_dir.join("configs/arc.toml");
     let contents = fs::read(config_path)?;
     let contents = String::from_utf8(contents)?;
-    let data: Value = toml::from_str(&contents)?;
-    let ctx: Context = Deserialize::deserialize(data)?;
+    let ctx = toml::from_str(&contents)?;
     // TODO: create list of contexts
     let contexts = vec![ctx];
     let template_dir = codegen_dir.join("templates");
@@ -71,8 +69,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn render(dir: &Path, name: &Path, contexts: &[Context]) -> Result<(), Box<dyn std::error::Error>> {
+fn render(dir: &Path, name: &Path, contexts: &[Value]) -> Result<(), Box<dyn std::error::Error>> {
     let mut env = Environment::empty();
+    env.set_undefined_behavior(minijinja::UndefinedBehavior::Strict);
+    env.set_trim_blocks(true);
+    //env.set_lstrip_blocks(true);
     env.set_loader(path_loader(dir.join("codegen/templates")));
     let tmpl = env.get_template(name.to_str().expect("invalid template name"))?;
     let mut iter = name.iter().map(OsStr::to_str).map(Option::unwrap);

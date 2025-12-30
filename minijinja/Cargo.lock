@@ -21,7 +21,6 @@ dependencies = [
  "minijinja",
  "notify",
  "rtrb",
- "serde",
  "toml",
 ]
 

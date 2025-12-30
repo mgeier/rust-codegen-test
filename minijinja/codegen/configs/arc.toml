@@ -1,1 +1,15 @@
+#storage = "vec"
+N = false
 arc = true
+bip = false
+contiguous = false
+padded = true
+pow2 = false
+#module = "rtrb::arc"
+
+# TODO: docstring? RingBuffer, module?
+#rb_doc = """
+#    /// Ring buffer ...
+#    ///
+#    /// TODO: ...
+#"""
