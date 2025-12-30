@@ -5,4 +5,3 @@ bip = false
 contiguous = false
 padded = true
 pow2 = false
-#module = "rtrb::array"

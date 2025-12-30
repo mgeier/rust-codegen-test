@@ -11,10 +11,3 @@ impl<T> RingBuffer<T> {
     fn new() -> Self { Self {} }
 }
 
-
-impl<T> MyStruct<T> {
-    fn new() -> Self { Self {} }
-
-}
-
-

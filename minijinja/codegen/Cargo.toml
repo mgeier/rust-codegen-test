@@ -6,10 +6,18 @@ publish = false
 
 # TODO: feature "watch" (active by default, not needed on CI)
 
+[features]
+default = ["watch"]
+watch = ["dep:notify", "dep:rtrb"]
+
 [dependencies]
 glob = "0.3"
-minijinja = { version = "2.14", default-features = false, features = ["deserialization", "loader", "macros", "multi_template"]}
-notify = "8.2"
+minijinja = { version = "2.14", default-features = false, features = [
+  "deserialization",
+  "loader",
+  "multi_template",
+] }
+notify = { version = "8.2", optional = true }
 #rtrb = { path = ".." }
-rtrb = "0.3"
+rtrb = { version = "0.3", optional = true }
 toml = "0.9"

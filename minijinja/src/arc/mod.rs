@@ -11,13 +11,6 @@ impl<T> RingBuffer<T> {
     fn new() -> Self { Self {} }
 }
 
-
-impl<T> MyStruct<T> {
-    fn new() -> Self { Self {} }
-
-}
-
-
 impl<T> RingBuffer<T> {
     pub fn producer(&self) -> Option<Producer<'_>> {
     }

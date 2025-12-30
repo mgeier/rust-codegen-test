@@ -1,9 +1,7 @@
 use std::{
-    collections::HashSet,
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
-    time::Duration,
 };
 
 use glob::glob;
@@ -11,18 +9,24 @@ use minijinja::{Environment, Value, context, path_loader, value::merge_maps};
 
 fn main() {
     let args = std::env::args();
+    #[cfg(feature = "watch")]
     let mut watch = false;
-    for arg in args {
+    for arg in args.skip(1) {
         match arg.as_str() {
             "-h" | "--help" => {
                 println!("Generates code for all RingBuffer variants.");
+                #[cfg(feature = "watch")]
                 println!("Use `--watch` to watch for changes in template files.");
                 return;
             }
+            #[cfg(feature = "watch")]
             "--watch" => {
                 watch = true;
             }
-            _ => {}
+            _ => {
+                eprintln!("Unsupported command line argument: {arg}");
+                std::process::exit(1);
+            }
         }
     }
     let codegen_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -43,11 +47,13 @@ fn main() {
         let ctx = toml::from_str(&contents).unwrap();
         contexts.push((config_name, ctx));
     }
+    #[cfg(feature = "watch")]
     if watch {
         use notify::{
             Config, Event, EventKind::Modify, RecommendedWatcher, RecursiveMode::Recursive,
             Watcher as _,
         };
+        use std::collections::HashSet;
         let (mut tx, mut rx) = rtrb::RingBuffer::new(128);
         let mut watcher = RecommendedWatcher::new(
             move |res| match res {
@@ -77,14 +83,13 @@ fn main() {
                 }
                 render(&parent_dir, path, &contexts);
             }
-            std::thread::sleep(Duration::from_secs(1));
+            std::thread::sleep(std::time::Duration::from_secs(1));
         }
-    } else {
-        for entry in glob(template_dir.join("**/*.rs").to_str().unwrap()).unwrap() {
-            let path = entry.unwrap();
-            let path = path.strip_prefix(&template_dir).unwrap();
-            render(&parent_dir, path, &contexts);
-        }
+    }
+    for entry in glob(template_dir.join("**/*.rs").to_str().unwrap()).unwrap() {
+        let path = entry.unwrap();
+        let path = path.strip_prefix(&template_dir).unwrap();
+        render(&parent_dir, path, &contexts);
     }
 }
 

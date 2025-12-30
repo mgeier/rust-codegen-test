@@ -17,17 +17,6 @@ impl<T> RingBuffer<T> {
     fn new() -> Self { Self {} }
 }
 
-{% macro impl_struct(name) %}
-impl<T> {{ name }}<T> {
-{{ caller() }}
-}
-{% endmacro %}
-
-{% call impl_struct("MyStruct") %}
-    fn new() -> Self { Self {} }
-{% endcall %}
-
-
 {% if arc %}
 impl<{{ params }}> RingBuffer<{{ args }}> {
     pub fn producer(&self) -> Option<Producer<{{ blank_lifetime }}>> {
