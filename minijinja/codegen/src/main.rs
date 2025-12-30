@@ -47,6 +47,11 @@ fn main() {
         let ctx = toml::from_str(&contents).unwrap();
         contexts.push((config_name, ctx));
     }
+    for entry in glob(template_dir.join("**/*.rs").to_str().unwrap()).unwrap() {
+        let path = entry.unwrap();
+        let path = path.strip_prefix(&template_dir).unwrap();
+        render(&parent_dir, path, &contexts);
+    }
     #[cfg(feature = "watch")]
     if watch {
         use notify::{
@@ -85,11 +90,6 @@ fn main() {
             }
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
-    }
-    for entry in glob(template_dir.join("**/*.rs").to_str().unwrap()).unwrap() {
-        let path = entry.unwrap();
-        let path = path.strip_prefix(&template_dir).unwrap();
-        render(&parent_dir, path, &contexts);
     }
 }
 
