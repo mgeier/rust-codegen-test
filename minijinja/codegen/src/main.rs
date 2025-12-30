@@ -6,15 +6,25 @@ use std::{
     time::Duration,
 };
 
+use glob::glob;
 use minijinja::{Environment, Value, context, path_loader, value::merge_maps};
 
-// TODO: --watch: only run on template file changes
-
-// TODO: -h/--help: rudimentary help text
-
 fn main() {
-    // TODO: simple CLI parsing with std::env::args()
-
+    let args = std::env::args();
+    let mut watch = false;
+    for arg in args {
+        match arg.as_str() {
+            "-h" | "--help" => {
+                println!("Generates code for all RingBuffer variants.");
+                println!("Use `--watch` to watch for changes in template files.");
+                return;
+            }
+            "--watch" => {
+                watch = true;
+            }
+            _ => {}
+        }
+    }
     let codegen_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let template_dir = codegen_dir.join("templates");
     let parent_dir = codegen_dir.join("..");
@@ -36,7 +46,6 @@ fn main() {
         let ctx = toml::from_str(&contents).unwrap();
         contexts.push((config_name, ctx));
     }
-    let watch = true;
     if watch {
         use notify::{
             Config, Event, EventKind::Modify, RecommendedWatcher, RecursiveMode::Recursive,
@@ -74,8 +83,11 @@ fn main() {
             std::thread::sleep(Duration::from_secs(1));
         }
     } else {
-        // TODO: walk templates/**/*.rs
-        render(&parent_dir, Path::new("src/mod.rs"), &contexts);
+        for entry in glob(template_dir.join("**/*.rs").to_str().unwrap()).unwrap() {
+            let path = entry.unwrap();
+            let path = path.strip_prefix(&template_dir).unwrap();
+            render(&parent_dir, path, &contexts);
+        }
     }
 }
 
